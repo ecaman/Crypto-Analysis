@@ -1,0 +1,167 @@
+---
+title: "Crypto-currency Analysis"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(flexdashboard)
+library(metricsgraphics)
+library(readr)
+library(dplyr)
+library(tidyr)
+library(highcharter)
+library(xts)
+
+# DowJones
+dowjones <- read.csv("./data/Dow_Jones_cleaned.csv")
+dowjones$Date_Time_New <- as.Date(dowjones$Date_Time_New, format='%d-%m-%Y')
+dowjones <- dowjones[order(dowjones$Date_Time_New, decreasing = FALSE),]
+
+# Bitcoin
+bitcoin <- read_csv("./data/bitcoin_d3.csv")
+bitcoin <- bitcoin[,2:3]
+bitcoin$date <- as.Date(bitcoin$date, format='%d-%m-%Y')
+bitcoin <- bitcoin[order(bitcoin$date, decreasing = FALSE),]
+
+# Correlation
+mycorrelation <- read_csv("./data/correlation.csv")
+mycorrelation$BTC <- as.double(mycorrelation$BTC)
+mycorrelation$IOT <- as.double(mycorrelation$IOT)
+mycorrelation <- mycorrelation[,2:9]
+
+
+```
+
+La Bulle
+=====================================
+Column
+-----------------------------------------------------------------------
+
+### La bulle historique: Crash du Dow Jones
+
+```{r}
+
+hchart(dowjones, "line", hcaes(x = Date_Time_New, y = Value), color = "#633591", name="DowJones")
+```
+
+Column
+-----------------------------------------------------------------------
+
+### Evolution of Bitcoin value
+
+```{r}
+hchart(bitcoin, "line", hcaes(x = date, y = close), color = "#B71C1C", name="Bitcoin")
+```
+
+Les Cryptos
+=====================================
+### Correlation
+
+```{r}
+hchart(cor(mycorrelation, use = "complete.obs"))
+```
+
+
+Notre Arbitrage {data-orientation=rows}
+=====================================
+
+Row 
+-----------------------------------------------------------------------
+
+Aujourd'hui :
+
+### Total downloads {.value-box}
+
+```{r}
+
+# Emit the download count
+renderValueBox({
+    valueBox(
+      "9501$", "Binance", icon =icon("cart-in", lib="glyphicon"),
+      color = "green"
+    )
+  })
+```
+
+
+### Total downloads {.value-box}
+
+```{r}
+# dlCount is a reactive expression that keeps track of the total
+# number of rows that have ever appeared through pkgStream.
+renderValueBox({
+    valueBox(
+      "9889$", "GDax", icon = icon("cart-out", lib = "glyphicon"),
+      color = "red"
+    )
+  })
+```
+
+### Total downloads {.value-box}
+
+```{r}
+# dlCount is a reactive expression that keeps track of the total
+# number of rows that have ever appeared through pkgStream.
+renderValueBox({
+    valueBox(
+      "388$", "Profit", icon = icon("coins", lib = "glyphicon"),
+      color = "purple"
+    )
+  })
+```
+
+
+Row
+-----------------------------------------------------------------------
+
+### Ecarts entre marches
+
+```{r}
+
+diff = read.csv("./data/gaps.csv", sep = ",")
+
+lower = xts(diff$min, as.POSIXlt(diff$Time))
+higher = xts(diff$max, as.POSIXlt(diff$Time))
+
+new <- highchart(type = "stock") %>% 
+  # hc_tooltip(shared=FALSE, pointFormat = "y: {point.y} <br> currency: {point.money}") %>% 
+  hc_tooltip(shared=FALSE, formatter = JS("function(){return('valeur: '+ this.y+'<br> market: '+ this.point.money)}")) %>%
+  hc_add_series(lower, id = "usdjpy", color="green" , money=diff$lower) %>%
+  hc_add_series(higher, id = "eurkpw", color="red", money=diff$bigger)
+
+new
+```
+
+Les Différents providers
+=====================================
+
+Column 
+--------------------------------------------------------------------
+
+### Lower Prices
+```{r}
+  
+lower_values = c(203, 196, 145, 69, 63, 27, 9, 7)
+lower_names = c("hitbtc", "kraken", "bitfinex", "therocktrading", "bitstamp", "itbit", "gemini", "cex.io")
+
+df_lower <- data.frame("names"=lower_names, "Lower_values"=lower_values)
+df_lower$names <- as.character(df_lower$names)
+#hchart(df_lower$Lower_values, type = "columns")
+barplot(lower_values, names.arg = lower_names, horiz=TRUE, col = "green")
+
+```
+
+
+### Higher Prices
+```{r}
+higher_values = c(625, 39, 22, 13, 8, 5, 5, 2)
+higher_names = c("cex.io", "coinbase", "therocktrading", "kraken", "bitfinex", "gemini", "hitbtc", "itbit")
+
+barplot(higher_values, names.arg = higher_names, horiz=TRUE, col = "red")
+
+```
